@@ -31,7 +31,7 @@ import datetime
 # Each bar must be on its own line and fields must be separated by comma (,).
 #
 # Bars Format:
-# Date,Open,High,Low,Close,Volume,Adj Close
+# Date,Open,High,Low,Close,Volume,Adj_Close
 #
 # The csv Date column must have the following format: YYYY-MM-DD
 
@@ -78,7 +78,7 @@ class RowParser(csvfeed.RowParser):
         high = float(csvRowDict["High"])
         low = float(csvRowDict["Low"])
         volume = float(csvRowDict["Volume"])
-        adjClose = float(csvRowDict["Adj Close"])
+        adjClose = float(csvRowDict["Adj_Close"])
 
         if self.__sanitize:
             open_, high, low, close = common.sanitize_ohlc(open_, high, low, close)

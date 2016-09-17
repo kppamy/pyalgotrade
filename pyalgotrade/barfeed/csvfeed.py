@@ -206,7 +206,7 @@ class GenericBarFeed(BarFeed):
     """A BarFeed that loads bars from CSV files that have the following format:
     ::
 
-        Date Time,Open,High,Low,Close,Volume,Adj Close
+        Date Time,Open,High,Low,Close,Volume,Adj_Close
         2013-01-01 13:59:00,13.51001,13.56,13.51,13.56,273.88014126,13.51001
 
     :param frequency: The frequency of the bars. Check :class:`pyalgotrade.bar.Frequency`.
@@ -219,7 +219,7 @@ class GenericBarFeed(BarFeed):
 
     .. note::
         * The CSV file **must** have the column names in the first row.
-        * It is ok if the **Adj Close** column is empty.
+        * It is ok if the **Adj_Close** column is empty.
         * When working with multiple instruments:
 
          * If all the instruments loaded are in the same timezone, then the timezone parameter may not be specified.
@@ -244,7 +244,7 @@ class GenericBarFeed(BarFeed):
             "low": "Low",
             "close": "Close",
             "volume": "Volume",
-            "adj_close": "Adj Close",
+            "adj_close": "Adj_Close",
         }
         # self.__dateTimeFormat expects time to be set so there is no need to
         # fix time.

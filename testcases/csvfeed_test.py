@@ -41,14 +41,14 @@ class TestCase(common.TestCase):
         feed.addValuesFromCSV(common.get_data_file_path("orcl-2000-yahoofinance.csv"))
 
         self.assertEqual(len(feed.getKeys()), 6)
-        for col in ["Open", "High", "Low", "Close", "Volume", "Adj Close"]:
+        for col in ["Open", "High", "Low", "Close", "Volume", "Adj_Close"]:
             self.assertEqual(len(feed[col]), 0)
 
         disp = dispatcher.Dispatcher()
         disp.addSubject(feed)
         disp.run()
 
-        for col in ["Open", "High", "Low", "Close", "Volume", "Adj Close"]:
+        for col in ["Open", "High", "Low", "Close", "Volume", "Adj_Close"]:
             self.assertEqual(len(feed[col]), 252)
 
         self.assertEqual(feed["Open"][-1], 30.87)
@@ -56,7 +56,7 @@ class TestCase(common.TestCase):
         self.assertEqual(feed["Low"][-1], 28.69)
         self.assertEqual(feed["Close"][-1], 29.06)
         self.assertEqual(feed["Volume"][-1], 31655500)
-        self.assertEqual(feed["Adj Close"][-1], 28.41)
+        self.assertEqual(feed["Adj_Close"][-1], 28.41)
 
     def testFeedWithQuandl(self):
         class RowFilter(csvfeed.RowFilter):

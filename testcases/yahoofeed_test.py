@@ -87,7 +87,7 @@ class FeedTestCase(common.TestCase):
             "High": 0,
             "Low": 0,
             "Volume": 0,
-            "Adj Close": 0}
+            "Adj_Close": 0}
         return parser.parseBar(row).getDateTime()
 
     def testInvalidConstruction(self):

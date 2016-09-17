@@ -30,7 +30,7 @@ datetime_format = "%Y-%m-%d %H:%M:%S"
 class CSVFileWriter(object):
     def __init__(self, csvFile):
         self.__file = open(csvFile, "w")
-        self.__writeLine("Date Time", "Open", "High", "Low", "Close", "Volume", "Adj Close")
+        self.__writeLine("Date Time", "Open", "High", "Low", "Close", "Volume", "Adj_Close")
 
     def __writeLine(self, *values):
         line = ",".join([str(value) for value in values])
@@ -85,7 +85,7 @@ def resample_to_csv(barFeed, frequency, csvFile):
     The CSV file will have the following format:
     ::
 
-        Date Time,Open,High,Low,Close,Volume,Adj Close
+        Date Time,Open,High,Low,Close,Volume,Adj_Close
         2013-01-01 00:00:00,13.51001,13.56,13.51,13.56,273.88014126,13.51001
 
 
@@ -97,7 +97,7 @@ def resample_to_csv(barFeed, frequency, csvFile):
 
     .. note::
         * Datetimes are stored without timezone information.
-        * **Adj Close** column may be empty if the input bar feed doesn't have that info.
+        * **Adj_Close** column may be empty if the input bar feed doesn't have that info.
         * Supported resampling frequencies are:
             * Less than bar.Frequency.DAY
             * bar.Frequency.DAY
