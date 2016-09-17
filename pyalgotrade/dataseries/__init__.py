@@ -145,3 +145,6 @@ class SequenceDataSeries(DataSeries):
 
     def getDateTimes(self):
         return self.__dateTimes.data()
+    
+    def getValues(self):
+        return self.__values.data()
