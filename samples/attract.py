@@ -53,33 +53,32 @@ class MyStrategy(strategy.BacktestingStrategy):
 
         bar = bars[self.__instrument]
         cur=bar.getPrice()
-        prcs=self.__prices
         pre=self.__prices[-2]
         print('pre:  '+str(pre)+' cur: '+str(cur))
         print('roc: \n'+self.roc[-1])
         vol=bar.getVolume()
-        vols=self.__vsma
         prevol=self.__vsma[-2]
         print('prev:  '+str(prevol)+' curv: '+str(vol))
+        roc=self.roc.getValues()
         # If a position was not opened, check if we should enter a long position.
         if self.__position is None:
-            if cur < self.__sma[-1]*0.9 and vol >prevol*2 and self.roc[-1]>0: 
+            if cur < self.__sma[-1]*0.9 and vol >prevol*2 and roc[-1]>0: 
                 # Enter a buy market order for 10 shares. The order is good till canceled.
                 print('pre:  '+str(pre)+' cur: '+str(cur))
                 print('prev:  '+str(prevol)+' curv: '+str(vol))
                 self.__position = self.enterLong(self.__instrument, 10, True)
         # Check if we have to exit the position.
-        elif bar.getPrice() > self.__sma[-1]*1.1 and not self.__position.exitActive():
+        elif cur > self.__sma[-1]*1.1 and not self.__position.exitActive() and roc[-1]< (-0.03) and roc[-2]< (-0.03) and roc[-3]< (-0.03) :
             self.__position.exitMarket()
 
 
 def run_strategy(smaPeriod,vsmaPeriod):
     # Load the yahoo feed from the CSV file
     feed = yahoofeed.Feed()
-    feed.addBarsFromCSV("orcl", "njyh.csv")
-    df=DataFrame.from_csv('njyh.csv')
+    feed.addBarsFromCSV("njyh", "601009.csv")
+    df=DataFrame.from_csv('601009.csv')
 
-    myStrategy = MyStrategy(feed,df,"orcl", smaPeriod,vsmaPeriod)
+    myStrategy = MyStrategy(feed,df,"njyh", smaPeriod,vsmaPeriod)
     # Evaluate the strategy with the feed.
     # Attach a returns analyzers to the strategy.
     returnsAnalyzer = returns.Returns()
@@ -94,19 +93,19 @@ def run_strategy(smaPeriod,vsmaPeriod):
     # Attach the plotter to the strategy.
     plt = plotter.StrategyPlotter(myStrategy,plotPortfolio=False)
     # Include the SMA in the instrument's subplot to get it displayed along with the closing prices.
-    plt.getInstrumentSubplot("orcl").addDataSeries("SMAH", myStrategy._MyStrategy__sma)
+    plt.getInstrumentSubplot("njyh").addDataSeries("SMAH", myStrategy._MyStrategy__sma)
     # Plot the simple returns on each bar.
-    plt.getOrCreateSubplot("orcl").addDataSeries("daily",myStrategy._MyStrategy__prices)
+    plt.getOrCreateSubplot("njyh").addDataSeries("daily",myStrategy._MyStrategy__prices)
     plt.getOrCreateSubplot("returns").addDataSeries("Simple returns", returnsAnalyzer.getCumulativeReturns())
     plt.getOrCreateSubplot("returns").addDataSeries("sharp", sharpeRatioAnalyzer.getReturns())
 
     # Run the strategy.
     myStrategy.run()
     myStrategy.info("Final portfolio value: $%.2f" % myStrategy.getResult())
-    plt.plot()
+    #plt.plot()
 
     ## Plot the strategy.
-    #myStrategy = MyStrategy(feed, "orcl", smaPeriod)
+    #myStrategy = MyStrategy(feed, "njyh", smaPeriod)
     #myStrategy.run()
     #print "Final portfolio value: $%.2f" % myStrategy.getBroker().getEquity()
 
