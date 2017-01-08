@@ -2,11 +2,15 @@ from pyalgotrade import strategy
 from pyalgotrade.technical import ma
 from pyalgotrade.technical import rsi
 from pyalgotrade.technical import cross
+from pyalgotrade.broker import backtesting
 
 
 class RSI2(strategy.BacktestingStrategy):
     def __init__(self, feed, instrument, entrySMA, exitSMA, rsiPeriod, overBoughtThreshold, overSoldThreshold):
-        super(RSI2, self).__init__(feed)
+        commission=backtesting.TradePercentage(0.0025)
+        broker = backtesting.Broker(1000000, feed,commission)
+        super(RSI2, self).__init__(feed,broker)
+        #super(RSI2, self).__init__(feed)
         self.__instrument = instrument
         # We'll use adjusted close values, if available, instead of regular close values.
         if feed.barsHaveAdjClose():
@@ -37,6 +41,10 @@ class RSI2(strategy.BacktestingStrategy):
         else:
             assert(False)
 
+    def onEnterOk(self, position):
+        execInfo = position.getEntryOrder().getExecutionInfo()
+        #self.info("BUY at $%.2f" % (execInfo.getPrice()))
+
     def onExitOk(self, position):
         if self.__longPos == position:
             self.__longPos = None
@@ -44,6 +52,8 @@ class RSI2(strategy.BacktestingStrategy):
             self.__shortPos = None
         else:
             assert(False)
+        execInfo = position.getExitOrder().getExecutionInfo()
+        #self.info("SELL at $%.2f" % (execInfo.getPrice()))
 
     def onExitCanceled(self, position):
         # If the exit was canceled, re-submit it.
@@ -56,7 +66,7 @@ class RSI2(strategy.BacktestingStrategy):
 
         bar = bars[self.__instrument]
         if self.__longPos is not None:
-            if self.exitLongSignal():
+            if self.exitLongSignal(bar):
                 self.__longPos.exitMarket()
         elif self.__shortPos is not None:
             if self.exitShortSignal():
@@ -72,8 +82,9 @@ class RSI2(strategy.BacktestingStrategy):
     def enterLongSignal(self, bar):
         return bar.getPrice() > self.__entrySMA[-1] and self.__rsi[-1] <= self.__overSoldThreshold
 
-    def exitLongSignal(self):
-        return cross.cross_above(self.__priceDS, self.__exitSMA) and not self.__longPos.exitActive()
+    def exitLongSignal(self,bar):
+        return bar.getPrice() > self.__exitSMA[-1] and self.__rsi[-1] >= self.__overBoughtThreshold and not self.__longPos.exitActive()
+        #return cross.cross_above(self.__priceDS, self.__exitSMA) and not self.__longPos.exitActive()
 
     def enterShortSignal(self, bar):
         return bar.getPrice() < self.__entrySMA[-1] and self.__rsi[-1] >= self.__overBoughtThreshold
