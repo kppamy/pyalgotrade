@@ -1,0 +1,380 @@
+var Bar  : integer;
+var SecondaryRally, NaturalRally, SecondaryReaction, DnTrend  : float;
+var ResumeUpTrend, ResumeDnTrend, UseRule10  : boolean;
+var Thresh , threshold, HalfThresh ,NaturalReaction, NaturalRallyBL, NaturalReactionRL, UpTrendRL, UpTrend, DnTrendBL    : float;
+var MA10_10, MA10_Now , State, ATRvalue         : integer;
+var PtsPctATR,  tradetrends   : integer;
+  { Install AutoStops }
+{InstallStopLoss( 12 ); }
+  threshold := 5;
+  PtsPctATR := 2;     {0=Points, 1=Precent, 2=ATR}
+  tradetrends := 1;   {0=trends and reactions, 1=trends only}
+    {State = 0 Uptrend }
+    {State = 1 Dntrend }
+    {State = 2 NatRally}
+    {State = 3 SecRally}
+    {State = 4 NatReact}
+    {State = 5 SecReact}
+  if (PtsPctATR = 0) then
+   begin
+     Thresh := threshold;
+     HalfThresh := thresh/2;
+   end;
+ for Bar := 1 to 21 do
+  begin
+  if (Bar = 1) then
+   begin
+     AddCommentary('Init');
+     SecondaryRally := PriceClose(bar);
+     NaturalRally := PriceClose(bar);
+     UpTrend := PriceClose(bar);
+     SecondaryReaction := PriceClose(bar);
+     NaturalReaction := PriceClose(bar);
+     DnTrend := PriceClose(bar);
+     ResumeUpTrend := false;
+     ResumeDnTrend := false;
+     UseRule10 := false; {if true try/test futures only}
+   end;
+ if (Bar <= 21) then
+  begin {1}
+   MA10_Now  := SMASeries( #Close, 10 );
+   MA10_10   := SMASeries( OffSetSeries( #Close, -10 ), 10 );
+
+
+   if (Bar = 21) then
+   begin {2}
+
+    if @MA10_Now[Bar] > @MA10_10[Bar] then
+     begin
+      AddCommentary('InUpTrend');
+      State := 0;
+      UpTrend := PriceClose(bar);
+     end
+     else
+     begin
+      AddCommentary('InDnTrend');
+      DnTrend := PriceClose(bar);;
+      State := 1;
+     end;
+   end {2}
+   end; {1}
+  end;
+
+  {Main Loop}
+  for Bar := 22 to BarCount - 1 do
+  begin {3}
+
+  if (PtsPctATR = 1) then
+   begin
+     Thresh := threshold * (PriceClose(bar-1)/100);
+     HalfThresh := Thresh/2;
+   end
+   else if (PtsPctATR = 2) then
+   begin
+     Thresh := threshold * ATR(Bar, 14);
+     HalfThresh := Thresh/2;
+     AddCommentary('ATR thresh ' + FloatToStr(Thresh));
+     AddCommentary('State ' + IntToStr(State));
+     AddCommentary('Price ' + FloatToStr(PriceClose(bar)));
+     AddCommentary('Nat Reaction ' + FloatToStr(NaturalReaction));
+   end;
+    case State of
+    0:
+    { If InUpTrend then}
+      begin {4}
+       if (PriceClose(bar) > (NaturalReaction + Thresh)) then
+          NaturalReactionRL := NaturalReaction; {Rule 4b}
+         AddCommentary('InUpTrend');
+
+         if ResumeUpTrend then { Rule 10 logic. }
+          begin {6}
+           if (PriceClose(bar) > (UpTrendRL + HalfThresh)) then
+            begin
+              ResumeUpTrend := false;   {Rule 10a}
+              State := 4; {InNatReact}
+              NaturalReaction := PriceClose(bar);
+              UpTrend := PriceClose(bar);
+            end
+            else if (PriceClose(bar) < (UpTrendRL - HalfThresh)) then
+              begin
+                ResumeUpTrend := false;   {Rule 10b}
+                State := 4; {InNatReact}
+                NaturalReaction := PriceClose(bar);
+              end;
+          end {6}
+            else if (PriceClose(bar) < (UpTrend - Thresh)) then {start NaturalReaction}
+             begin {Rules 4a, 6a}
+              State := 4; {InNatReact}
+              UpTrendRL := UpTrend;  {pivot point, rule 8}
+              NaturalReaction := PriceClose(bar);
+              ResumeUpTrend := false;
+             end
+             else if (PriceClose(bar) > UpTrend) then {remain in uptrend higher high price}
+                UpTrend := PriceClose(bar);
+         end;  {4  InUpTrend}
+       2:
+       {Natural Rally State}
+         begin {7}
+
+           if (PriceClose(bar) > (NaturalReaction + thresh)) then
+              NaturalReactionRL := NaturalReaction; {Rule 4b}
+           if (PriceClose(bar) > UpTrend) then {resume UpTrend}
+               begin {rules 6d, 6f}
+                State := 0; {InUpTrend}
+                AddCommentary(' Set to InUpTrend');
+                UpTrend := PriceClose(bar);
+                if UseRule10 then ResumeUpTrend := true;
+               end
+               else if (PriceClose(bar) > (NaturalRallyBL + HalfThresh)) then
+                begin {Rules 5a}
+                 AddCommentary('Set to InUpTrend');
+                 State := 0; {InUpTrend}
+                 UpTrend := PriceClose(bar);
+                 if UseRule10 then ResumeUpTrend := true;
+                end
+               else if (PriceClose(bar) < DnTrend) then {Start DnTrend}
+                begin {Rule 6b}
+                 AddCommentary('InNatRally start dntrend');
+                 State := 1; {InDnTrend}
+                 DnTrend := PriceClose(bar);
+                 NaturalRallyBL := PriceClose(bar); {rule 4D}
+                end
+                else if (PriceClose(bar) < (NaturalRally - Thresh)) then
+                 begin
+                   if (PriceClose(bar) < NaturalReaction) then {start Natural Reaction}
+                    begin {rule 4d, 6b}
+                      State := 4; {InNatReact}
+                      AddCommentary('InNatRally start nat reaction');
+                      NaturalReaction := PriceClose(bar);
+                      NaturalRallyBL :=  PriceClose(bar); {rule 4D} {Pivot pt, Rule 9b}
+                    end
+                   else {start secondaryreaction}
+                    begin  {rule 6h}
+                      AddCommentary('InNatRally start sec reaction');
+                      State := 5; {InSecReact}
+                      SecondaryReaction := PriceClose(bar);
+                    end;
+                    if (PriceClose(bar) > NaturalRally) then
+                       NaturalRally := PriceClose(bar);
+                  AddCommentary(' none of the above');
+                end;
+              end; {7 InNatRally}
+            3:   { Secondary Rally State}
+               begin
+                     if (PriceClose(bar) > UpTrend)  then
+                       begin {rules 6d, 6f}
+                        AddCommentary('InSecRally');
+                        State := 0; {InUpTrend}
+                        UpTrend := PriceClose(bar);
+                        if UseRule10 then ResumeUpTrend := true;
+                       end
+                      else if (PriceClose(bar) > (NaturalRallyBL + halfthresh)) then
+                       begin {rules 5a}
+                        State := 0; {InUpTrend}
+                        UpTrend := PriceClose(bar);
+                        if UseRule10 then ResumeUpTrend := true;
+                       end
+                      else if (PriceClose(bar) > NaturalRally)  then
+                        begin {rule 6g}
+                          State := 2; {InNatRally}
+                          NaturalRally := PriceClose(bar);
+                        end
+                       else if (PriceClose(bar) < DnTrend) then {start DnTrend}
+                        begin {rule 6b}
+                          State := 1; {InDnTrend}
+                          DnTrend := PriceClose(bar);
+                          NaturalRallyBL := PriceClose(bar); {rule 4d, pivot pt, rule 9b}
+                        end
+                       else if (PriceClose(bar) > SecondaryRally) then {record higher high}
+                         SecondaryRally := PriceClose(bar); {rule 3, 6g}
+                  end; {InSecRally}
+                { DOWN TREND STATE}
+              1:
+                begin {9}
+
+                  if (PriceClose(bar) < (NaturalRally - Thresh)) then
+                     NaturalRallyBL := NaturalRally; {rule 4d}
+                  if ResumeDnTrend then {Rule 10 logic best works with futures}
+                    begin
+                      if (PriceClose(bar) < (DnTrendBL - HalfThresh)) then
+                       begin
+                        ResumeDnTrend := false; {rule 10a}
+                        DnTrend :=  PriceClose(bar);  {rule 2, 6b}
+                       end
+                      else if (PriceClose(bar) > (DnTrendBL + HalfThresh)) then {DnTrend Over}
+                      {return to NaturalRally}
+                       begin
+                        AddCommentary('return to NaturalRally');
+                        ResumeDnTrend := false;
+                        State := 2; {InNatRally}
+                        NaturalRally := PriceClose(bar);
+                       end;
+                     end
+                     else if (PriceClose(bar) > (DnTrend + Thresh))  then  {Start NaturalRally}
+                      begin  { rules 4c, 6c}
+                        AddCommentary('return to NaturalRally');
+                        State := 2; {InNatRally}
+                        NaturalRally := PriceClose(bar);
+                        DnTrendBL := DnTrend; {Pivot Pt, Rule 8}
+                        ResumeDnTrend := false;
+                      end
+                       else if (PriceClose(bar) < DnTrend)  then {remain in down trend, record lower lows}
+                         DnTrend := PriceClose(bar); {Rule 2, 6b}
+                  end;  {9 InDnTrend}
+                4:
+                  { Natural Reaction State }
+                   begin   {Nat Reaction State}
+                      if (PriceClose(bar) < (NaturalRally - Thresh)) then
+                        NaturalRallyBL := NaturalRally; {Rule 4d}
+                      if (PriceClose(bar) < DnTrend) then {resume DnTrend}
+                        begin {Rule 6b, 6e}
+                          AddCommentary('InNatReact - InDnTrend1');
+                          State := 1; {InDnTrend}
+                          DnTrend := PriceClose(bar);
+                          if UseRule10 then ResumeDnTrend := true;
+                        end
+                        else if (PriceClose(bar) < (NaturalReactionRL - halfthresh )) then
+                        {resume DnTrend}
+                         begin {rules 5b}
+                           AddCommentary('InNatReact - InDnTrend2');
+                           State := 1; {InDnTrend}
+                           DnTrend := PriceClose(bar);
+                           if UseRule10 then ResumeDnTrend := true;
+                         end
+                         else if (PriceClose(bar) > UpTrend)  then {start UpTrend}
+                          begin {rule 6d}
+                           AddCommentary('InNatReact - InUpTrend1');
+                           State := 0; {InUpTrend}
+                           UpTrend := PriceClose(bar);
+                           NaturalReactionRL := PriceClose(bar); {rule 4b, pvt point, rule 9c}
+                          end
+                            else if (PriceClose(bar) > NaturalReaction + Thresh) then
+                             begin
+                              if (PriceClose(bar) > NaturalRally) then {start Natural Rally}
+                                begin {rules 4b, 6d}
+                                 State := 2; {In Nat Rally}
+                                 NaturalRally := PriceClose(bar);
+                                 NaturalReactionRL := PriceClose(bar); {rule 4b, pvt point, rule 9c}
+                                end
+                               else {start SecondaryRally}
+                                 begin {rule 6g}
+                                  State := 3; {In Sec Rally}
+                                  SecondaryRally := PriceClose(bar);
+                                 end;
+                              end
+                            else if (PriceClose(bar) < NaturalReaction) then {remain in NaturalReaction , record lower lows}
+                              NaturalReaction := PriceClose(bar); {rule 3, 6a, 6b}
+                       end; {InNatReact}
+                   5:
+                     begin
+                         AddCommentary('InSecReact');
+                         if (PriceClose(bar) < DnTrend)  then {resume DnTrend}
+                          begin {rules 6b, 6e}
+                           State := 1; {InDnTrend}
+                           DnTrend := PriceClose(bar);
+                           if UseRule10 then ResumeDnTrend := true;
+                          end
+                         else if (PriceClose(bar) < (NaturalReactionRL - halfthresh)) then
+                           begin {rules 5b}
+                            State := 1; {InDnTrend}
+                            DnTrend := PriceClose(bar);
+                            if UseRule10 then ResumeDnTrend := true;
+                           end
+                          else if (PriceClose(bar) > UpTrend) then {start UpTrend}
+                            begin {rules 6d}
+                              State := 0; {InUpTrend}
+                              UpTrend := PriceClose(bar);
+                              NaturalReactionRL := PriceClose(bar); {rule 4b, pivot point, rule 9c}
+                            end
+                          else if (PriceClose(bar) < NaturalReaction) then
+                            begin {rules 6h}
+                               State := 4; {InNatReact}
+                               NaturalReaction := PriceClose(bar);
+                            end
+                          else if (PriceClose(bar) < SecondaryReaction) then {record lower lows}
+                              SecondaryReaction := PriceClose(bar);  {rule 6h}
+                      end; {InSecReact}
+                 else
+                   begin
+                      AddCommentary('Never get here! ');
+                   end;
+           end;
+ { Paint it }
+   case State of
+    0:
+     begin
+      SetBarColor( Bar, #blue );
+     end;
+    1:
+     begin
+      SetBarColor( Bar, #Red );    {Down Trend}
+     end;
+    2:
+     begin
+      SetBarColor( Bar, #Black );
+     end;
+    3:
+     begin
+      SetBarColor( Bar, #Green );
+     end;
+    4:
+     begin
+      SetBarColor( Bar, #yellow );
+     end;
+    5:
+     begin
+      SetBarColor( Bar, #purple );
+     end
+    else
+       AddCommentary('not important to show! ');
+  end;
+if (tradetrends = 1) then
+ { Trend Rules }
+  begin
+   if (State = 0) then  {uptrend}
+     begin
+      if (not lastpositionactive()) then
+          begin
+            buyAtMarket( Bar+1, 'LE');
+          end;
+      if positionshort(lastposition) then
+         coverAtMarket( Bar+1,LastPosition, 'SXL');
+    end;
+
+    if (State = 1) then  {downtrend}
+      begin
+       if (not lastpositionactive()) then
+         begin
+           shortAtMarket( Bar+1, 'SE');
+         end;
+       if positionlong(lastposition) then
+         SellAtMarket( Bar+1, Lastposition, 'LXS');
+      end;
+
+   end
+  else
+{ Trend plus Rules = trade trends, rallies, reactions}
+  begin
+    if ((State = 0) or (State = 2) or (State = 3)) then
+    begin
+      if (not lastpositionactive()) then
+          begin
+            buyAtMarket( Bar+1, 'LE');
+          end;
+      if positionshort(lastposition) then
+         coverAtMarket( Bar+1,LastPosition, 'SXL');
+    end;
+
+    if ((State = 1) or (State = 4) or (State = 5)) then
+      begin
+       if (not lastpositionactive()) then
+         begin
+           shortAtMarket( Bar+1, 'SE');
+         end;
+       if positionlong(lastposition) then
+         SellAtMarket( Bar+1, Lastposition, 'LXS');
+      end;
+   end;
+
+ end;
+
