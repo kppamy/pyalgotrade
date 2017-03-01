@@ -4,283 +4,259 @@ from pyalgotrade import strategy
 from pyalgotrade.technical import ma
 from pyalgotrade.technical import rsi
 from pyalgotrade.technical import cross
+
 threshold = 5;
 PtsPctATR = 2; #{0=Points, 1=Precent, 2=ATR}
 tradetrends = 1; #{0=trends and reactions, 1=trends only}
-#{state = 0 Uptrend }
-#{state = 1 Dntrend }
-#{state = 2 NatRally}
-#{state = 3 SecRally}
-#{state = 4 NatReact}
-#{state = 5 SecReact}
+#{self.state = 0 self.upTrend }
+#{self.state = 1 self.dnTrend }
+#{self.state = 2 NatRally}
+#{self.state = 3 SecRally}
+#{self.state = 4 NatReact}
+#{self.state = 5 SecReact}
 if (PtsPctATR = 0):
     Thresh = threshold;
     HalfThresh = thresh/2;
-    def AddCommentary(comment):
-        print(comment+\n)
 
-def PriceClose(bar):
-    return bar.getPrice() 
+def addCommentary(comment):
+    print(comment)
 
 class JLV(strategy.BacktestingStrategy):
+
     def __init__(self, feed, instrument,window):
         self.priceDS = feed[instrument].getPriceDataSeries()
         self.MA10_Now = ma.SMA(self.priceDS,window)
+        self.instrement=instrument
 
     def onBars(self, bars):
+        bar=bars[self.instrement]
         lth=len(self.priceDS)
+        self.close=bar.getPrice()
         if lth==1:
-            initStrate(bar)
+            initStrate()
         elif lth ==21:
             if self.MA10_Now[-1] > self.MA10_10[-11] :
-                AddCommentary('InUpTrend');
-                State = 0;
-                UpTrend = PriceClose(bar);
+                addCommentary('InUpTrend');
+                self.state = 0;
+                self.upTrend = self.close;
             else : 
-                AddCommentary('InDnTrend');
-                DnTrend = PriceClose(bar);;
-                State = 1;
+                addCommentary('InDnTrend');
+                self.dnTrend = self.close;;
+                self.state = 1;
         elif lth>21:
             mainLoop(bar)
         else:
-            AddCommentary('Never got here')
+            addCommentary('Never got here')
 
-    def initStrate(self, bar):
-        AddCommentary('Init');
-        SecondaryRally = PriceClose(bar);
-        NaturalRally = PriceClose(bar);
-        UpTrend = PriceClose(bar);
-        SecondaryReaction = PriceClose(bar);
-        NaturalReaction = PriceClose(bar);
-        DnTrend = PriceClose(bar);
-        ResumeUpTrend = False;
-        ResumeDnTrend = False;
+    def initStrate(self):
+        addCommentary('Init');
+        self.secondaryRally = self.close;
+        self.natRally = self.close;
+        self.upTrend = self.close;
+        self.secondaryReaction = self.close;
+        self.naturalReaction = self.close;
+        self.dnTrend = self.close;
+        self.resumeUpTrend = False;
+        self.resumeDnTrend = False;
 
-    def mainLoop(self,bar):
+    def mainLoop(self):
         switch(state){
             case 0:
-                handleUpTrend(bar);
+                handleUpTrend();
                 break;
             case 1:
-                handleDnTrend(bar);
+                handleDnTrend();
                 break;
             case 2:
-                handleNaturalRally(bar);
+                handleNaturalRally();
                 break;
             case 3:
-                handleSecondRally(bar);
+                handleSecondRally();
                 break;
             case 4:
-                handleNaturalReaction(bar);
+                handleNaturalReaction();
                 break;
             case 5:
-                handleSecondReaction(bar);
+                handleSecondReaction();
                 break;
         }
-    def resumeUpTrend(self,bar):
+    def resumeUpTrend(self):
         #begin {6}
-        if (PriceClose(bar) > (UpTrendRL + HalfThresh)) :
-            ResumeUpTrend = False; #{Rule 10a}
-            State = 4; #{InNatReact}
-            NaturalReaction = PriceClose(bar);
-            UpTrend = PriceClose(bar);
-        elif (PriceClose(bar) < (UpTrendRL - HalfThresh)) :
-            ResumeUpTrend = False; #{Rule 10b}
-            State = 4; #{InNatReact}
-            NaturalReaction = PriceClose(bar);
+        if (self.close > (UpTrendRL + HalfThresh)) :
+            self.resumeUpTrend = False; #{Rule 10a}
+            self.state = 4; #{InNatReact}
+            self.naturalReaction = self.close;
+            self.upTrend = self.close;
+        elif (self.close < (UpTrendRL - HalfThresh)) :
+            self.resumeUpTrend = False; #{Rule 10b}
+            self.state = 4; #{InNatReact}
+            self.naturalReaction = self.close;
 
-    def handleUpTrend(self,bar):
+    def handleUpTrend(self):
         #begin {4}
-        if (PriceClose(bar) > (NaturalReaction + Thresh)) :
-            NaturalReactionRL = NaturalReaction; #{Rule 4b}
-            AddCommentary('InUpTrend');
-            if ResumeUpTrend : #{ Rule 10 logic. }
-                resumeUpTrend(bar)
-        elif (PriceClose(bar) < (UpTrend - Thresh)) : #{start NaturalReaction}
+        if (self.close > (self.naturalReaction + Thresh)) :
+            self.naturalReactionRL = NaturalReaction; #{Rule 4b}
+            addCommentary('InUpTrend');
+            if self.resumeUpTrend : #{ Rule 10 logic. }
+               resumeUpTrend()
+        elif (self.close < (self.upTrend - Thresh)) : #{start NaturalReaction}
             #begin {Rules 4a, 6a}
-            State = 4; #{InNatReact}
+            self.state = 4; #{InNatReact}
             UpTrendRL = UpTr #{pivot point, rule 8}
-            NaturalReaction = PriceClose(bar);
-            ResumeUpTrend = False;
-         elif (PriceClose(bar) > UpTrend) : #{Remain in uptrend higher high price}
-             UpTrend = PriceClose(bar);
+            self.naturalReaction = self.close;
+            self.resumeUpTrend = False;
+        elif (self.close > UpTrend) : #{Remain in self.upTrend higher high price}
+            self.upTrend = self.close;
          #{4  InUpTrend}
 
-     def resumeDnTrend(self,bar):
-     def handleDnTrend(self,bar):
-         #begin {9}
-         if (PriceClose(bar) < (NaturalRally - Thresh)) :
-             NaturalRallyBL = NaturalRally; #{Rule 4d}
-             if ResumeDnTrend : #{Rule 10 logic best works with futures}
-                 if (PriceClose(bar) < (DnTrendBL - HalfThresh)) :
-                 ResumeDnTrend = False; #{Rule 10a}
-                 DnTrend =  PriceClose(bar); #{Rule 2, 6b}
-             elif (PriceClose(bar) > (DnTrendBL + HalfThresh)) : #{DnTrend Over}
-             #{return to NaturalRally}
-                      AddCommentary('return to NaturalRally');
-                      ResumeDnTrend = False;
-                      State = 2; #{InNatRally}
-                      NaturalRally = PriceClose(bar);
+    def resumeDnTrend(self,bar):
+    def handleDnTrend(self,bar):
+        #begin {9}
+        if (self.close < (self.natRally - Thresh)) :
+            self.naturalRallyBL = NaturalRally; #{Rule 4d}
+            if self.resumeDnTrend : #{Rule 10 logic best works with futures}
+                if (self.close < (DnTrendBL - HalfThresh)) :
+                    self.resumeDnTrend = False; #{Rule 10a}
+                    self.dnTrend =  self.close; #{Rule 2, 6b}
+                elif (self.close > (DnTrendBL + HalfThresh)) : #{self.dnTrend Over}
+                    #{return to NaturalRally}
+                    addCommentary('return to NaturalRally');
+                    self.resumeDnTrend = False;
+                    self.state = 2; #{InNatRally}
+                    self.natRally = self.close;
+        elif (self.close > (self.dnTrend + Thresh))  :  #{start NaturalRally}
+            #begin  { rules 4c, 6c}
+            addCommentary('return to NaturalRally');
+            self.state = 2; #{InNatRally}
+            self.natRally = self.close;
+            self.dnTrendBL = DnTr #{Pivot Pt, Rule 8}
+            self.resumeDnTrend = False;
+        elif (self.close < self.dnTrend)  : #{Remain in down trend, record lower lows}
+            self.dnTrend = self.close; #{Rule 2, 6b}
 
-
-         elif (PriceClose(bar) > (DnTrend + Thresh))  :  #{start NaturalRally}
-         #begin  { rules 4c, 6c}
-         AddCommentary('return to NaturalRally');
-         State = 2; #{InNatRally}
-         NaturalRally = PriceClose(bar);
-         DnTrendBL = DnTr #{Pivot Pt, Rule 8}
-         ResumeDnTrend = False;
-
-                       elif (PriceClose(bar) < DnTrend)  : #{Remain in down trend, record lower lows}
-                       DnTrend = PriceClose(bar); #{Rule 2, 6b}
-                       def handleNaturalRally(self,bar):
-                           {Natural Rally State}
-                           #begin {7}
-
-           if (PriceClose(bar) > (NaturalReaction + thresh)) :
-           NaturalReactionRL = NaturalReaction; #{Rule 4b}
-           if (PriceClose(bar) > UpTrend) : #{Resume UpTrend}
-           #begin {rules 6d, 6f}
-           State = 0; #{InUpTrend}
-           AddCommentary(' Set to InUpTrend');
-           UpTrend = PriceClose(bar);
-           if UseRule10 : ResumeUpTrend = true;
-           
-               elif (PriceClose(bar) > (NaturalRallyBL + HalfThresh)) :
-               #begin {Rules 5a}
-               AddCommentary('Set to InUpTrend');
-               State = 0; #{InUpTrend}
-               UpTrend = PriceClose(bar);
-               if UseRule10 : ResumeUpTrend = true;
-               
-               elif (PriceClose(bar) < DnTrend) : #{start DnTrend}
-               #begin {Rule 6b}
-               AddCommentary('InNatRally start dntrend');
-               State = 1; #{InDnTrend}
-               DnTrend = PriceClose(bar);
-               NaturalRallyBL = PriceClose(bar); #{Rule 4D}
-               
-                elif (PriceClose(bar) < (NaturalRally - Thresh)) :
-                
-                if (PriceClose(bar) < NaturalReaction) : #{start Natural Reaction}
+    def handleNaturalRally(self,bar):
+        #{Natural Rally State}
+        #begin {7}
+        if (self.close > (self.naturalReaction + thresh)) :
+            self.naturalReactionRL = NaturalReaction; #{Rule 4b}
+        if (self.close > UpTrend) : #{Resume UpTrend}
+            #begin {rules 6d, 6f}
+            self.state = 0; #{InUpTrend}
+            addCommentary(' Set to InUpTrend');
+            self.upTrend = self.close;
+            self.resumeUpTrend = True;
+        elif (self.close > (self.naturalRallyBL + HalfThresh)) :
+            #begin {Rules 5a}
+            addCommentary('Set to InUpTrend');
+            self.state = 0; #{InUpTrend}
+            self.upTrend = self.close;
+            self.resumeUpTrend = True;
+        elif (self.close < self.dnTrend) : #{start self.dnTrend}
+            #begin {Rule 6b}
+            addCommentary('InNatRally start self.dnTrend');
+            self.state = 1; #{InDnTrend}
+            self.dnTrend = self.close;
+            self.naturalRallyBL = self.close; #{Rule 4D}
+        elif (self.close < (self.natRally - Thresh)) :
+            if (self.close < NaturalReaction) : #{start Natural Reaction}
                 #begin {rule 4d, 6b}
-                State = 4; #{InNatReact}
-                AddCommentary('InNatRally start nat reaction');
-                NaturalReaction = PriceClose(bar);
-                NaturalRallyBL =  PriceClose(bar); #{Rule 4D} {Pivot pt, Rule 9b}
-                
-                   else #{start secondaryreaction}
-                   begin  {rule 6h}
-                   AddCommentary('InNatRally start sec reaction');
-                   State = 5; #{InSecReact}
-                   SecondaryReaction = PriceClose(bar);
-                   
-                   if (PriceClose(bar) > NaturalRally) :
-                   NaturalRally = PriceClose(bar);
-                   AddCommentary(' none of the above');
-                   
+                self.state = 4; #{InNatReact}
+                addCommentary('InNatRally start nat reaction');
+                self.naturalReaction = self.close;
+                self.naturalRallyBL =  self.close; #{Rule 4D} {Pivot pt, Rule 9b}
+            else #{start secondaryreaction}
+                #begin  {rule 6h}
+                addCommentary('InNatRally start sec reaction');
+                self.state = 5; #{InSecReact}
+                self.secondaryReaction = self.close;
+        if (self.close > NaturalRally) :
+            self.natRally = self.close;
+            addCommentary(' none of the above');
 
-def handleSecondRally(self,bar):
-    
-    if (PriceClose(bar) > UpTrend)  :
-    #begin {rules 6d, 6f}
-    AddCommentary('InSecRally');
-    State = 0; #{InUpTrend}
-    UpTrend = PriceClose(bar);
-    if UseRule10 : ResumeUpTrend = true;
-    
-                      elif (PriceClose(bar) > (NaturalRallyBL + halfthresh)) :
-                      #begin {rules 5a}
-                      State = 0; #{InUpTrend}
-                      UpTrend = PriceClose(bar);
-                      if UseRule10 : ResumeUpTrend = true;
-                      
-                      elif (PriceClose(bar) > NaturalRally)  :
-                      #begin {rule 6g}
-                      State = 2; #{InNatRally}
-                      NaturalRally = PriceClose(bar);
-                      
-                       elif (PriceClose(bar) < DnTrend) : #{start DnTrend}
-                       #begin {rule 6b}
-                       State = 1; #{InDnTrend}
-                       DnTrend = PriceClose(bar);
-                       NaturalRallyBL = PriceClose(bar); #{Rule 4d, pivot pt, rule 9b}
-                       
-                       elif (PriceClose(bar) > SecondaryRally) : #{Record higher high}
-                       SecondaryRally = PriceClose(bar); #{Rule 3, 6g}
+    def handleSecondRally(self,bar):
+        if (self.close > UpTrend)  :
+            #begin {rules 6d, 6f}
+            addCommentary('InSecRally');
+            self.state = 0; #{InUpTrend}
+            self.upTrend = self.close;
+            self.resumeUpTrend = True;
+        elif (self.close > (self.naturalRallyBL + halfthresh)) :
+            #begin {rules 5a}
+            self.state = 0; #{InUpTrend}
+            self.upTrend = self.close;
+            self.resumeUpTrend = True;
+        elif (self.close > NaturalRally)  :
+            #begin {rule 6g}
+            self.state = 2; #{InNatRally}
+            self.natRally = self.close;
+        elif (self.close < self.dnTrend) : #{start self.dnTrend}
+            #begin {rule 6b}
+            self.state = 1; #{InDnTrend}
+            self.dnTrend = self.close;
+            self.naturalRallyBL = self.close; #{Rule 4d, pivot pt, rule 9b}
+        elif (self.close > SecondaryRally) : #{Record higher high}
+            self.secondaryRally = self.close; #{Rule 3, 6g}
 
+    def handleNaturalReaction(self,bar): 
+        #{ Natural Reaction self.state }
+        #begin   {Nat Reaction State}
+        if (self.close < (self.natRally - Thresh)) :
+            self.naturalRallyBL = NaturalRally; #{Rule 4d}
+            if (self.close < self.dnTrend) : #{Resume self.dnTrend}
+                #begin {Rule 6b, 6e}
+                addCommentary('InNatReact - InDnTrend1');
+                self.state = 1; #{InDnTrend}
+                self.dnTrend = self.close;
+                self.resumeDnTrend = True;
+        elif (self.close < (self.naturalReactionRL - halfthresh )) :
+            #{resume self.dnTrend}
+            #begin {rules 5b}
+            addCommentary('InNatReact - InDnTrend2');
+            self.state = 1; #{InDnTrend}
+            self.dnTrend = self.close;
+            self.resumeDnTrend = True;
+         elif (self.close > UpTrend)  : #{start UpTrend}
+             #begin {rule 6d}
+             addCommentary('InNatReact - InUpTrend1');
+             self.state = 0; #{InUpTrend}
+             self.upTrend = self.close;
+             self.naturalReactionRL = self.close; #{Rule 4b, pvt point, rule 9c}
+        elif (self.close > self.naturalReaction + Thresh) :
+            if (self.close > NaturalRally) : #{start Natural Rally}
+                #begin {rules 4b, 6d}
+                self.state = 2; #{In Nat Rally}
+                self.natRally = self.close;
+                self.naturalReactionRL = self.close; #{Rule 4b, pvt point, rule 9c}
+           else #{start SecondaryRally}
+               #begin {rule 6g}
+               self.state = 3; #{In Sec Rally}
+               self.secondaryRally = self.close;
+        elif (self.close < NaturalReaction) : #{Remain in self.naturalReaction , record lower lows}
+            self.naturalReaction = self.close; #{Rule 3, 6a, 6b}
 
-       def handleNaturalReaction(self,bar): 
-           { Natural Reaction State }
-           begin   {Nat Reaction State}
-           if (PriceClose(bar) < (NaturalRally - Thresh)) :
-           NaturalRallyBL = NaturalRally; #{Rule 4d}
-           if (PriceClose(bar) < DnTrend) : #{Resume DnTrend}
-           #begin {Rule 6b, 6e}
-           AddCommentary('InNatReact - InDnTrend1');
-           State = 1; #{InDnTrend}
-           DnTrend = PriceClose(bar);
-           if UseRule10 : ResumeDnTrend = true;
-           
-                        elif (PriceClose(bar) < (NaturalReactionRL - halfthresh )) :
-                        {resume DnTrend}
-                        #begin {rules 5b}
-                        AddCommentary('InNatReact - InDnTrend2');
-                        State = 1; #{InDnTrend}
-                        DnTrend = PriceClose(bar);
-                        if UseRule10 : ResumeDnTrend = true;
-                        
-                         elif (PriceClose(bar) > UpTrend)  : #{start UpTrend}
-                         #begin {rule 6d}
-                         AddCommentary('InNatReact - InUpTrend1');
-                         State = 0; #{InUpTrend}
-                         UpTrend = PriceClose(bar);
-                         NaturalReactionRL = PriceClose(bar); #{Rule 4b, pvt point, rule 9c}
-                         
-                            elif (PriceClose(bar) > NaturalReaction + Thresh) :
-                            
-                            if (PriceClose(bar) > NaturalRally) : #{start Natural Rally}
-                            #begin {rules 4b, 6d}
-                            State = 2; #{In Nat Rally}
-                            NaturalRally = PriceClose(bar);
-                            NaturalReactionRL = PriceClose(bar); #{Rule 4b, pvt point, rule 9c}
-                            
-                               else #{start SecondaryRally}
-                               #begin {rule 6g}
-                               State = 3; #{In Sec Rally}
-                               SecondaryRally = PriceClose(bar);
-                               
-                               
-                            elif (PriceClose(bar) < NaturalReaction) : #{Remain in NaturalReaction , record lower lows}
-                            NaturalReaction = PriceClose(bar); #{Rule 3, 6a, 6b}
-                            def handleSecondReaction(self, bar):
-                                
-                                AddCommentary('InSecReact');
-                                if (PriceClose(bar) < DnTrend)  : #{Resume DnTrend}
-                                #begin {rules 6b, 6e}
-                                State = 1; #{InDnTrend}
-                                DnTrend = PriceClose(bar);
-                                if UseRule10 : ResumeDnTrend = true;
-                                
-                         elif (PriceClose(bar) < (NaturalReactionRL - halfthresh)) :
-                         #begin {rules 5b}
-                         State = 1; #{InDnTrend}
-                         DnTrend = PriceClose(bar);
-                         if UseRule10 : ResumeDnTrend = true;
-                         
-                          elif (PriceClose(bar) > UpTrend) : #{start UpTrend}
-                          #begin {rules 6d}
-                          State = 0; #{InUpTrend}
-                          UpTrend = PriceClose(bar);
-                          NaturalReactionRL = PriceClose(bar); #{Rule 4b, pivot point, rule 9c}
-                          
-                          elif (PriceClose(bar) < NaturalReaction) :
-                          #begin {rules 6h}
-                          State = 4; #{InNatReact}
-                          NaturalReaction = PriceClose(bar);
-                          
-                          elif (PriceClose(bar) < SecondaryReaction) : #{Record lower lows}
-                          SecondaryReaction = PriceClose(bar); #{Rule 6h}
+    def handleSecondReaction(self, bar):
+        addCommentary('InSecReact');
+        if (self.close < self.dnTrend)  : #{Resume self.dnTrend}
+            #begin {rules 6b, 6e}
+            self.state = 1; #{InDnTrend}
+            self.dnTrend = self.close;
+            self.resumeDnTrend = True;
+        elif (self.close < (self.naturalReactionRL - halfthresh)) :
+            #begin {rules 5b}
+            self.state = 1; #{InDnTrend}
+            self.dnTrend = self.close;
+            self.resumeDnTrend = True;
+        elif (self.close > UpTrend) : #{start UpTrend}
+            #begin {rules 6d}
+            self.state = 0; #{InUpTrend}
+            self.upTrend = self.close;
+            self.naturalReactionRL = self.close; #{Rule 4b, pivot point, rule 9c}
+        elif (self.close < NaturalReaction) :
+            #begin {rules 6h}
+            self.state = 4; #{InNatReact}
+            self.naturalReaction = self.close;
+        elif (self.close < SecondaryReaction) : #{Record lower lows}
+            self.secondaryReaction = self.close; #{Rule 6h}
                           
     def handleTrade(self,bar):
         if tradetrends ==1:
@@ -290,12 +266,12 @@ def handleSecondRally(self,bar):
 
     def tradeOnly(self,bar):
         #{ Trend Rules }
-        if (State = 0) : #{uptrend}
+        if (self.state = 0) : #{uptrend}
             if (not lastpositionactive()) :
                 buyAtMarket( Bar+1, 'LE');
             if positionshort(lastposition) :
                 coverAtMarket( Bar+1,LastPosition, 'SXL');
-        if (State = 1) : #{downtrend}
+        if (self.state = 1) : #{downtrend}
            if (not lastpositionactive()) :
                shortAtMarket( Bar+1, 'SE');
            if positionlong(lastposition) :
@@ -303,14 +279,13 @@ def handleSecondRally(self,bar):
 
     def tradeReac(self,bar):
         #{ Trend plus Rules = trade trends, rallies, reactions}
-        if ((State = 0) or (State = 2) or (State = 3)) :
+        if ((self.state = 0) or (self.state = 2) or (self.state = 3)) :
             if (not lastpositionactive()) :
                 buyAtMarket( Bar+1, 'LE');
             if positionshort(lastposition) :
                 coverAtMarket( Bar+1,LastPosition, 'SXL');
-        if ((State = 1) or (State = 4) or (State = 5)) :
+        if ((self.state = 1) or (self.state = 4) or (self.state = 5)) :
             if (not lastpositionactive()) :
                shortAtMarket( Bar+1, 'SE');
             if positionlong(lastposition) :
                SellAtMarket( Bar+1, Lastposition, 'LXS');
-
