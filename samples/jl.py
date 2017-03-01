@@ -95,11 +95,11 @@ class JLV(strategy.BacktestingStrategy):
     def handleUpTrend(self):
         #begin {4}
         if (self.close > (self.naturalReaction + Thresh)) :
-            self.naturalReactionRL = NaturalReaction; #{Rule 4b}
+            self.naturalReactionRL = self.naturalReaction; #{Rule 4b}
             addCommentary('InUpTrend');
             if self.resumeUpTrend : #{ Rule 10 logic. }
                resumeUpTrend()
-        elif (self.close < (self.upTrend - Thresh)) : #{start NaturalReaction}
+        elif (self.close < (self.upTrend - Thresh)) : #{start self.naturalReaction}
             #begin {Rules 4a, 6a}
             self.state = 4; #{InNatReact}
             UpTrendRL = UpTr #{pivot point, rule 8}
@@ -109,24 +109,26 @@ class JLV(strategy.BacktestingStrategy):
             self.upTrend = self.close;
          #{4  InUpTrend}
 
-    def resumeDnTrend(self,bar):
-    def handleDnTrend(self,bar):
+    def resumeDnTrend(self):
+        if (self.close < (DnTrendBL - HalfThresh)) :
+            self.resumeDnTrend = False; #{Rule 10a}
+            self.dnTrend =  self.close; #{Rule 2, 6b}
+        elif (self.close > (DnTrendBL + HalfThresh)) : #{self.dnTrend Over}
+            #{return to self.natualRally}
+            addCommentary('return to self.natualRally');
+            self.resumeDnTrend = False;
+            self.state = 2; #{InNatRally}
+            self.natRally = self.close;
+
+    def handleDnTrend(self):
         #begin {9}
         if (self.close < (self.natRally - Thresh)) :
-            self.naturalRallyBL = NaturalRally; #{Rule 4d}
+            self.naturalRallyBL = self.natualRally; #{Rule 4d}
             if self.resumeDnTrend : #{Rule 10 logic best works with futures}
-                if (self.close < (DnTrendBL - HalfThresh)) :
-                    self.resumeDnTrend = False; #{Rule 10a}
-                    self.dnTrend =  self.close; #{Rule 2, 6b}
-                elif (self.close > (DnTrendBL + HalfThresh)) : #{self.dnTrend Over}
-                    #{return to NaturalRally}
-                    addCommentary('return to NaturalRally');
-                    self.resumeDnTrend = False;
-                    self.state = 2; #{InNatRally}
-                    self.natRally = self.close;
-        elif (self.close > (self.dnTrend + Thresh))  :  #{start NaturalRally}
+               self.resumeDnTrend() 
+        elif (self.close > (self.dnTrend + Thresh))  :  #{start self.natualRally}
             #begin  { rules 4c, 6c}
-            addCommentary('return to NaturalRally');
+            addCommentary('return to self.natualRally');
             self.state = 2; #{InNatRally}
             self.natRally = self.close;
             self.dnTrendBL = DnTr #{Pivot Pt, Rule 8}
@@ -138,7 +140,7 @@ class JLV(strategy.BacktestingStrategy):
         #{Natural Rally State}
         #begin {7}
         if (self.close > (self.naturalReaction + thresh)) :
-            self.naturalReactionRL = NaturalReaction; #{Rule 4b}
+            self.naturalReactionRL = self.naturalReaction; #{Rule 4b}
         if (self.close > UpTrend) : #{Resume UpTrend}
             #begin {rules 6d, 6f}
             self.state = 0; #{InUpTrend}
@@ -158,7 +160,7 @@ class JLV(strategy.BacktestingStrategy):
             self.dnTrend = self.close;
             self.naturalRallyBL = self.close; #{Rule 4D}
         elif (self.close < (self.natRally - Thresh)) :
-            if (self.close < NaturalReaction) : #{start Natural Reaction}
+            if (self.close < self.naturalReaction) : #{start Natural Reaction}
                 #begin {rule 4d, 6b}
                 self.state = 4; #{InNatReact}
                 addCommentary('InNatRally start nat reaction');
@@ -169,7 +171,7 @@ class JLV(strategy.BacktestingStrategy):
                 addCommentary('InNatRally start sec reaction');
                 self.state = 5; #{InSecReact}
                 self.secondaryReaction = self.close;
-        if (self.close > NaturalRally) :
+        if (self.close > self.natualRally) :
             self.natRally = self.close;
             addCommentary(' none of the above');
 
@@ -185,7 +187,7 @@ class JLV(strategy.BacktestingStrategy):
             self.state = 0; #{InUpTrend}
             self.upTrend = self.close;
             self.resumeUpTrend = True;
-        elif (self.close > NaturalRally)  :
+        elif (self.close > self.natualRally)  :
             #begin {rule 6g}
             self.state = 2; #{InNatRally}
             self.natRally = self.close;
@@ -201,7 +203,7 @@ class JLV(strategy.BacktestingStrategy):
         #{ Natural Reaction self.state }
         #begin   {Nat Reaction State}
         if (self.close < (self.natRally - Thresh)) :
-            self.naturalRallyBL = NaturalRally; #{Rule 4d}
+            self.naturalRallyBL = self.natualRally; #{Rule 4d}
             if (self.close < self.dnTrend) : #{Resume self.dnTrend}
                 #begin {Rule 6b, 6e}
                 addCommentary('InNatReact - InDnTrend1');
@@ -222,7 +224,7 @@ class JLV(strategy.BacktestingStrategy):
              self.upTrend = self.close;
              self.naturalReactionRL = self.close; #{Rule 4b, pvt point, rule 9c}
         elif (self.close > self.naturalReaction + Thresh) :
-            if (self.close > NaturalRally) : #{start Natural Rally}
+            if (self.close > self.natualRally) : #{start Natural Rally}
                 #begin {rules 4b, 6d}
                 self.state = 2; #{In Nat Rally}
                 self.natRally = self.close;
@@ -231,7 +233,7 @@ class JLV(strategy.BacktestingStrategy):
                #begin {rule 6g}
                self.state = 3; #{In Sec Rally}
                self.secondaryRally = self.close;
-        elif (self.close < NaturalReaction) : #{Remain in self.naturalReaction , record lower lows}
+        elif (self.close < self.naturalReaction) : #{Remain in self.naturalReaction , record lower lows}
             self.naturalReaction = self.close; #{Rule 3, 6a, 6b}
 
     def handleSecondReaction(self, bar):
@@ -251,7 +253,7 @@ class JLV(strategy.BacktestingStrategy):
             self.state = 0; #{InUpTrend}
             self.upTrend = self.close;
             self.naturalReactionRL = self.close; #{Rule 4b, pivot point, rule 9c}
-        elif (self.close < NaturalReaction) :
+        elif (self.close < self.naturalReaction) :
             #begin {rules 6h}
             self.state = 4; #{InNatReact}
             self.naturalReaction = self.close;
