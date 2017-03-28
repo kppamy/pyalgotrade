@@ -5,7 +5,7 @@ from pyalgotrade.technical import ma
 from pyalgotrade.broker import backtesting
 from pyalgotrade.barfeed import yahoofeed
 
-threshold = 5;
+threshold = 0.8;
 PtsPctATR = 2; #{0=Points, 1=Precent, 2=ATR}
 tradetrends = 1; #{0=trends and reactions, 1=trends only}
 #{self.state = 0 self.upTrend }
@@ -14,15 +14,17 @@ tradetrends = 1; #{0=trends and reactions, 1=trends only}
 #{self.state = 3 SecRally}
 #{self.state = 4 NatReact}
 #{self.state = 5 SecReact}
+
+def addCommentary(comment):
+    print(comment)
+
 if (PtsPctATR == 0):
     Thresh = threshold;
     HalfThresh = Thresh/2;
 else:
     Thresh = threshold;
     HalfThresh = Thresh/2;
-
-def addCommentary(comment):
-    print(comment)
+    addCommentary('******HalfThresh******'+str(HalfThresh))
 
 class JLV(strategy.BacktestingStrategy):
     def __init__(self, feed, instrument,window):
@@ -40,9 +42,8 @@ class JLV(strategy.BacktestingStrategy):
         bar=bars[self.instrument]
         lth=len(self.priceDS)
         self.close=bar.getPrice()
-        if lth==1:
+        if lth ==21:
             self.initStrate()
-        elif lth ==21:
             if self.MA10_Now[-1] > self.MA10_Now[-11] :
                 addCommentary('InUpTrend '+str(bar.getDateTime()));
                 self.state = 0;
