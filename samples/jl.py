@@ -58,14 +58,14 @@ class JLV(strategy.BacktestingStrategy):
 
     def initStrate(self):
         addCommentary('Init');
-        self.secondaryRally = self.close;
-        self.natRally = self.close;
-        self.natRallyBL=self.close;
-        self.upTrend = self.close;
-        self.secondaryReaction = self.close;
-        self.naturalReaction = self.close;
-        self.dnTrend = self.close;
-        self.dnTrendBL =self.close;
+        #self.secondaryRally = self.close;
+        self.natRally = 0;
+        self.naturalRallyBL = -1;
+        #self.upTrend = self.close;
+        #self.secondaryReaction = self.close;
+        self.naturalReactionRL = 0;
+        self.dnTrend = -1 ;
+        #self.dnTrendBL =self.close;
         self.resumeUT = False;
         self.resumeDnTrend = False;
 
@@ -87,31 +87,34 @@ class JLV(strategy.BacktestingStrategy):
         #begin {6}
         if (self.close > (self.upTrendRL + HalfThresh)) :
             self.resumeUT = False; #{Rule 10a}
-            self.state = 4; #{InNatReact}
+            self.state = 0; #{InUpTend}
             self.naturalReaction = self.close;
             self.upTrend = self.close;
+            addCommentary('resumeUpTrend success')
         elif (self.close < (self.upTrendRL - HalfThresh)) :
             self.resumeUT = False; #{Rule 10b}
             self.state = 4; #{InNatReact}
             self.naturalReaction = self.close;
+            addCommentary('resumeUpTrend fail ')
 
     def handleUpTrend(self,bars):
         bar=bars[self.instrument]
         #begin {4}
-        if (self.close > (self.naturalReaction + Thresh)) :
-            self.naturalReactionRL = self.naturalReaction; #{Rule 4b}
-            addCommentary('InUpTrend '+str(bar.getDateTime()));
-            if self.resumeUT : #{ Rule 10 logic. }
-               self.resumeUpTrend()
+        if self.resumeUT : #{ Rule 10 logic. }
+            if (self.close > (self.naturalReaction + Thresh)) :
+                self.naturalReactionRL = self.naturalReaction; #{Rule 4b}
+                addCommentary('InUpTrend '+str(bar.getDateTime())+' naturalReactionRL= '+str(self.naturalRallyBL));
+                self.resumeUpTrend()
         elif (self.close < (self.upTrend - Thresh)) : #{start self.naturalReaction}
             #begin {Rules 4a, 6a}
             self.state = 4; #{InNatReact}
-            addCommentary('InNatReact'+str(bar.getDateTime()));
+            addCommentary('UpTrend===>InNatReact '+str(self.close)+' '+str(bar.getDateTime()));
             self.upTrendRL = self.upTrend #{pivot point, rule 8}
             self.naturalReaction = self.close;
             self.resumeUT = False;
         elif (self.close > self.upTrend) : #{Remain in self.upTrend higher high price}
             self.upTrend = self.close;
+            addCommentary('remain in upTrend: '+ str(self.upTrend)+' '+str(bar.getDateTime()))
          #{4  InUpTrend}
 
     def resumeDnTrendProcess(self,bars):
@@ -120,22 +123,24 @@ class JLV(strategy.BacktestingStrategy):
             self.resumeDnTrend = False; #{Rule 10a}
             self.dnTrend =  self.close; #{Rule 2, 6b}
         elif (self.close > (self.dnTrendBL + HalfThresh)) : #{self.dnTrend Over}
-            #{return to self.natRally}
+            #{return to self.natualRally}
             addCommentary('return to self.natRally'+str(bar.getDateTime()));
             self.resumeDnTrend = False;
             self.state = 2; #{InNatRally}
             self.natRally = self.close;
 
     def handleDnTrend(self,bars):
-        bar=bars[self.instrument]
         #begin {9}
+        bar=bars[self.instrument]
+        today=' '+str(self.close)+' '+str(bar.getDateTime())
         if (self.close < (self.natRally - Thresh)) :
-            self.natRallyBL = self.natRally; #{Rule 4d}
+            self.naturalRallyBL = self.natRally; #{Rule 4d}
+            addCommentary('natRally ==> dnTrend day 1'+today)
             if self.resumeDnTrend : #{Rule 10 logic best works with futures}
                self.resumeDnTrendProcess(bars)
-        elif (self.close > (self.dnTrend + Thresh))  :  #{start self.natRally}
+        elif (self.close > (self.dnTrend + Thresh))  :  #{start self.natualRally}
             #begin  { rules 4c, 6c}
-            addCommentary('return to self.natRally'+str(bar.getDateTime()));
+            addCommentary('dnTrend ==> natRally'+today);
             self.state = 2; #{InNatRally}
             self.natRally = self.close;
             self.dnTrendBL = self.dnTrend #{Pivot Pt, Rule 8}
@@ -145,38 +150,41 @@ class JLV(strategy.BacktestingStrategy):
 
     def handleNaturalRally(self,bars):
         bar=bars[self.instrument]
+        today=' '+str(self.close)+' '+str(bar.getDateTime())
         #{Natural Rally State}
         #begin {7}
+        addCommentary(' ')
         if (self.close > (self.naturalReaction + Thresh)) :
             self.naturalReactionRL = self.naturalReaction; #{Rule 4b}
+            addCommentary(' naturalRally day 1 '+today);
         if (self.close > self.upTrend) : #{Resume self.upTrend}
             #begin {rules 6d, 6f}
             self.state = 0; #{InUpTrend}
-            addCommentary(' Set to InUpTrend'+str(bar.getDateTime()));
+            addCommentary(' natualRally ==>InUpTrend resumeUT  '+today);
             self.upTrend = self.close;
             self.resumeUT = True;
-        elif (self.close > (self.natRallyBL + HalfThresh)) :
+        elif (self.close > (self.naturalRallyBL + HalfThresh)) :
             #begin {Rules 5a}
-            addCommentary('Set to InUpTrend'+str(bar.getDateTime()));
+            addCommentary('natualRally ==> InUpTrend resumeUT '+today);
             self.state = 0; #{InUpTrend}
             self.upTrend = self.close;
             self.resumeUT = True;
         elif (self.close < self.dnTrend) : #{start self.dnTrend}
             #begin {Rule 6b}
-            addCommentary('InNatRally start self.dnTrend'+str(bar.getDateTime()));
+            addCommentary('InNatRally ==> dnTrend '+today);
             self.state = 1; #{InDnTrend}
             self.dnTrend = self.close;
-            self.natRallyBL = self.close; #{Rule 4D}
+            self.naturalRallyBL = self.close; #{Rule 4D}
         elif (self.close < (self.natRally - Thresh)) :
             if (self.close < self.naturalReaction) : #{start Natural Reaction}
                 #begin {rule 4d, 6b}
                 self.state = 4; #{InNatReact}
-                addCommentary('InNatRally start nat reaction'+str(bar.getDateTime()));
+                addCommentary('InNatRally ==> natReaction '+today);
                 self.naturalReaction = self.close;
-                self.natRallyBL =  self.close; #{Rule 4D} {Pivot pt, Rule 9b}
+                self.naturalRallyBL =  self.close; #{Rule 4D} {Pivot pt, Rule 9b}
             else: #{start secondaryreaction}
                 #begin  {rule 6h}
-                addCommentary('InNatRally start sec reaction'+str(bar.getDateTime()));
+                addCommentary('InNatRally ==> secReaction '+today);
                 self.state = 5; #{InSecReact}
                 self.secondaryReaction = self.close;
         if (self.close > self.natRally) :
@@ -184,14 +192,14 @@ class JLV(strategy.BacktestingStrategy):
             addCommentary(' none of the above');
 
     def handleSecondRally(self,bars):
-        bar = bars[self.instrument]
+        bar=bars[instrument]
         if (self.close > self.upTrend)  :
             #begin {rules 6d, 6f}
             addCommentary('InSecRally'+str(bar.getDateTime()));
             self.state = 0; #{InUpTrend}
             self.upTrend = self.close;
             self.resumeUT = True;
-        elif (self.close > (self.natRallyBL + HalfThresh)) :
+        elif (self.close > (self.naturalRallyBL + HalfThresh)) :
             #begin {rules 5a}
             self.state = 0; #{InUpTrend}
             self.upTrend = self.close;
@@ -204,32 +212,33 @@ class JLV(strategy.BacktestingStrategy):
             #begin {rule 6b}
             self.state = 1; #{InDnTrend}
             self.dnTrend = self.close;
-            self.natRallyBL = self.close; #{Rule 4d, pivot pt, rule 9b}
+            self.naturalRallyBL = self.close; #{Rule 4d, pivot pt, rule 9b}
         elif (self.close > self.secondaryRally) : #{Record higher high}
             self.secondaryRally = self.close; #{Rule 3, 6g}
 
     def handleNaturalReaction(self,bars):
         bar=bars[self.instrument]
+        today=' '+str(self.close)+' '+str(bar.getDateTime())
         #{ Natural Reaction self.state }
         #begin   {Nat Reaction State}
         if (self.close < (self.natRally - Thresh)) :
-            self.natRallyBL = self.natRally; #{Rule 4d}
+            self.naturalRallyBL = self.natRally; #{Rule 4d}
             if (self.close < self.dnTrend) : #{Resume self.dnTrend}
                 #begin {Rule 6b, 6e}
-                addCommentary('InNatReact - InDnTrend1'+str(bar.getDateTime()));
+                addCommentary('InNatReact - InDnTrend1'+today);
                 self.state = 1; #{InDnTrend}
                 self.dnTrend = self.close;
                 self.resumeDnTrend = True;
         elif (self.close < (self.naturalReactionRL - HalfThresh )) :
             #{resume self.dnTrend}
             #begin {rules 5b}
-            addCommentary('InNatReact - InDnTrend2'+str(bar.getDateTime()));
+            addCommentary('InNatReact ==> InDnTrend2'+today);
             self.state = 1; #{InDnTrend}
             self.dnTrend = self.close;
             self.resumeDnTrend = True;
         elif (self.close > self.upTrend)  : #{start self.upTrend}
             #begin {rule 6d}
-            addCommentary('InNatReact - InUpTrend1'+str(bar.getDateTime()));
+            addCommentary('InNatReact ==> InUpTrend1'+today);
             self.state = 0; #{InUpTrend}
             self.upTrend = self.close;
             self.naturalReactionRL = self.close; #{Rule 4b, pvt point, rule 9c}
@@ -239,12 +248,18 @@ class JLV(strategy.BacktestingStrategy):
                 self.state = 2; #{In Nat Rally}
                 self.natRally = self.close;
                 self.naturalReactionRL = self.close; #{Rule 4b, pvt point, rule 9c}
+                if self.naturalRallyBL < 0 :
+                    self.naturalRallyBL = self.close
+                if self.dnTrend < 0:
+                    self.dnTrend = 0
+                addCommentary(' naturalReaction ==> natRally '+today)
             else :#{start SecondaryRally}
                #begin {rule 6g}
                self.state = 3; #{In Sec Rally}
                self.secondaryRally = self.close;
         elif (self.close < self.naturalReaction) : #{Remain in self.naturalReaction , record lower lows}
             self.naturalReaction = self.close; #{Rule 3, 6a, 6b}
+            addCommentary('remain in naturalReaction '+today)
 
     def handleSecondReaction(self, bar):
         addCommentary('InSecReact');
@@ -327,7 +342,8 @@ class JLV(strategy.BacktestingStrategy):
 
     def coverAtMarket(self,bars,pos,comment):
         print("conver short at " +str(bars[self.instrument].getDateTime()))
-        self.__shortPos.exitMarket()
+        if not self.__shortPos.exitActive():
+            self.__shortPos.exitMarket()
 
     def shortAtMarket(self,bars,comment):
         shares = int(self.getBroker().getCash() * 0.9 / bars[self.instrument].getPrice())
@@ -337,7 +353,8 @@ class JLV(strategy.BacktestingStrategy):
 
     def sellAtMarket(self,bars,pos,comment):
         print("conver short at " +str(bars[self.instrument].getDateTime()))
-        self.__longPos.exitMarket()
+        if not self.__longPos.exitActive():
+            self.__longPos.exitMarket()
 
     def onEnterOk(self, position):
         execInfo = position.getEntryOrder().getExecutionInfo()
