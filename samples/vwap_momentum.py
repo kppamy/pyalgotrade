@@ -1,6 +1,6 @@
 from pyalgotrade import strategy
 from pyalgotrade import plotter
-from pyalgotrade.tools import quandl
+from pyalgotrade.tools import yahoofinance
 from pyalgotrade.technical import vwap
 from pyalgotrade.stratanalyzer import sharpe
 
@@ -31,12 +31,12 @@ class VWAPMomentum(strategy.BacktestingStrategy):
 
 
 def main(plot):
-    instrument = "AAPL"
+    instrument = "aapl"
     vwapWindowSize = 5
     threshold = 0.01
 
     # Download the bars.
-    feed = quandl.build_feed("WIKI", [instrument], 2011, 2012, ".")
+    feed = yahoofinance.build_feed([instrument], 2011, 2012, ".")
 
     strat = VWAPMomentum(feed, instrument, vwapWindowSize, threshold)
     sharpeRatioAnalyzer = sharpe.SharpeRatio()
@@ -51,7 +51,6 @@ def main(plot):
 
     if plot:
         plt.plot()
-
 
 if __name__ == "__main__":
     main(True)

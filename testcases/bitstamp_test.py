@@ -1,6 +1,6 @@
 # PyAlgoTrade
 #
-# Copyright 2011-2017 Gabriel Martin Becedillas Ruiz
+# Copyright 2011-2015 Gabriel Martin Becedillas Ruiz
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
 .. moduleauthor:: Gabriel Martin Becedillas Ruiz <gabriel.becedillas@gmail.com>
 """
 
-import unittest
 import datetime
 import time
 import threading
@@ -187,17 +186,7 @@ class TestingLiveBroker(broker.LiveBroker):
         return self.__httpClient
 
 
-class NonceTest(unittest.TestCase):
-    def testNonceGenerator(self):
-        gen = httpclient.NonceGenerator()
-        prevNonce = 0
-        for i in range(1000):
-            nonce = gen.getNext()
-            self.assertGreater(nonce, prevNonce)
-            prevNonce = nonce
-
-
-class TestStrategy(test_strategy.BaseStrategy):
+class TestStrategy(test_strategy.BaseTestStrategy):
     def __init__(self, feed, brk):
         super(TestStrategy, self).__init__(feed, brk)
         self.bid = None

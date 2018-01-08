@@ -1,6 +1,6 @@
 # PyAlgoTrade
 #
-# Copyright 2011-2017 Gabriel Martin Becedillas Ruiz
+# Copyright 2011-2015 Gabriel Martin Becedillas Ruiz
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,18 +38,6 @@ def parse_datetime(dateTime):
     except ValueError:
         ret = datetime.datetime.strptime(dateTime, "%Y-%m-%d %H:%M:%S.%f")
     return dt.as_utc(ret)
-
-
-class NonceGenerator(object):
-    def __init__(self):
-        self.__prev = None
-
-    def getNext(self):
-        ret = int(time.time())
-        if self.__prev is not None and ret <= self.__prev:
-            ret = self.__prev + 1
-        self.__prev = ret
-        return ret
 
 
 class AccountBalance(object):
@@ -132,12 +120,19 @@ class HTTPClient(object):
         self.__clientId = clientId
         self.__key = key
         self.__secret = secret
-        self.__nonce = NonceGenerator()
+        self.__prevNonce = None
         self.__lock = threading.Lock()
+
+    def _getNonce(self):
+        ret = int(time.time())
+        if ret == self.__prevNonce:
+            ret += 1
+        self.__prevNonce = ret
+        return ret
 
     def _buildQuery(self, params):
         # Build the signature.
-        nonce = self.__nonce.getNext()
+        nonce = self._getNonce()
         message = "%d%s%s" % (nonce, self.__clientId, self.__key)
         signature = hmac.new(self.__secret, msg=message, digestmod=hashlib.sha256).hexdigest().upper()
 

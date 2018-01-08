@@ -1,15 +1,15 @@
 import sma_crossover
 from pyalgotrade import plotter
-from pyalgotrade.tools import quandl
+from pyalgotrade.tools import yahoofinance
 from pyalgotrade.stratanalyzer import sharpe
 
 
 def main(plot):
-    instrument = "AAPL"
+    instrument = "aapl"
     smaPeriod = 163
 
     # Download the bars.
-    feed = quandl.build_feed("WIKI", [instrument], 2011, 2012, ".")
+    feed = yahoofinance.build_feed([instrument], 2011, 2012, ".")
 
     strat = sma_crossover.SMACrossOver(feed, instrument, smaPeriod)
     sharpeRatioAnalyzer = sharpe.SharpeRatio()

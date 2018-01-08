@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # PyAlgoTrade
 #
-# Copyright 2011-2017 Gabriel Martin Becedillas Ruiz
+# Copyright 2011-2015 Gabriel Martin Becedillas Ruiz
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ from pyalgotrade.utils import csvutils
 
 
 def download_csv(instrument, begin, end):
-    url = "https://finance.google.com/finance/historical"
+    url = "http://www.google.com/finance/historical"
     params = {
         "q": instrument,
         "startdate": begin.strftime("%Y-%m-%d"),

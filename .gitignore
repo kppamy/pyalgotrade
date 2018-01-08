@@ -6,11 +6,9 @@ doc/_build
 .ipynb_checkpoints
 .ropeproject
 
-/venv
-/data
-/dist
-/build
-/PyAlgoTrade.egg-info
-/notebooks
+data
+dist
+build
+PyAlgoTrade.egg-info
 
-/testcases/credentials.py
+testcases/twitter_credentials.py
