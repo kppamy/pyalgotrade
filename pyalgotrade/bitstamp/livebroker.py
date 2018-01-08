@@ -1,6 +1,6 @@
 # PyAlgoTrade
 #
-# Copyright 2011-2017 Gabriel Martin Becedillas Ruiz
+# Copyright 2011-2015 Gabriel Martin Becedillas Ruiz
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,10 +58,15 @@ class TradeMonitor(threading.Thread):
         userTrades = self.__httpClient.getUserTransactions(httpclient.HTTPClient.UserTransactionType.MARKET_TRADE)
 
         # Get the new trades only.
-        ret = [ t for t in userTrades if t.getId() > self.__lastTradeId ]
-
-        # Sort by id, so older trades first.
-        return sorted(ret, key=lambda t: t.getId())
+        ret = []
+        for userTrade in userTrades:
+            if userTrade.getId() > self.__lastTradeId:
+                ret.append(userTrade)
+            else:
+                break
+        # Older trades first.
+        ret.reverse()
+        return ret
 
     def getQueue(self):
         return self.__queue

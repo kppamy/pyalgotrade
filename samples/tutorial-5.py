@@ -1,11 +1,11 @@
 from pyalgotrade import plotter
-from pyalgotrade.barfeed import quandlfeed
+from pyalgotrade.barfeed import yahoofeed
 from pyalgotrade.stratanalyzer import returns
 import sma_crossover
 
-# Load the bar feed from the CSV file
-feed = quandlfeed.Feed()
-feed.addBarsFromCSV("orcl", "WIKI-ORCL-2000-quandl.csv")
+# Load the yahoo feed from the CSV file
+feed = yahoofeed.Feed()
+feed.addBarsFromCSV("orcl", "orcl-2000.csv")
 
 # Evaluate the strategy with the feed's bars.
 myStrategy = sma_crossover.SMACrossOver(feed, "orcl", 20)
@@ -27,4 +27,3 @@ myStrategy.info("Final portfolio value: $%.2f" % myStrategy.getResult())
 
 # Plot the strategy.
 plt.plot()
-

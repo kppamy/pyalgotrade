@@ -1,6 +1,6 @@
 # PyAlgoTrade
 #
-# Copyright 2011-2017 Gabriel Martin Becedillas Ruiz
+# Copyright 2011-2015 Gabriel Martin Becedillas Ruiz
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,11 +66,10 @@ def run_python_code(code):
     return run_cmd(cmd)
 
 
-def run_sample_module(module, params=[]):
+def run_sample_script(script, params=[]):
     cmd = ["python"]
     cmd.append("-u")
-    cmd.append("-m")
-    cmd.append("samples.%s" % module)
+    cmd.append(os.path.join("samples", script))
     cmd.extend(params)
     return run_cmd(cmd)
 
