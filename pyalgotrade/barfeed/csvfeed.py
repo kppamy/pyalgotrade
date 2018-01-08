@@ -1,6 +1,6 @@
 # PyAlgoTrade
 #
-# Copyright 2011-2015 Gabriel Martin Becedillas Ruiz
+# Copyright 2011-2017 Gabriel Martin Becedillas Ruiz
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -112,12 +112,25 @@ class BarFeed(membf.BarFeed):
     def setBarFilter(self, barFilter):
         self.__barFilter = barFilter
 
-    def addBarsFromCSV(self, instrument, path, rowParser):
+    def addBarsFromCSV(self, instrument, path, rowParser, skipMalformedBars=False):
+        def parse_bar_skip_malformed(row):
+            ret = None
+            try:
+                ret = rowParser.parseBar(row)
+            except Exception:
+                pass
+            return ret
+
+        if skipMalformedBars:
+            parse_bar = parse_bar_skip_malformed
+        else:
+            parse_bar = rowParser.parseBar
+
         # Load the csv file
         loadedBars = []
         reader = csvutils.FastDictReader(open(path, "r"), fieldnames=rowParser.getFieldNames(), delimiter=rowParser.getDelimiter())
         for row in reader:
-            bar_ = rowParser.parseBar(row)
+            bar_ = parse_bar(row)
             if bar_ is not None and (self.__barFilter is None or self.__barFilter.includeBar(bar_)):
                 loadedBars.append(bar_)
 
@@ -179,7 +192,7 @@ class GenericRowParser(RowParser):
         # Process extra columns.
         extra = {}
         for k, v in csvRowDict.iteritems():
-            if k not in self.__columnNames:
+            if k not in self.__columnNames.values():
                 extra[k] = csvutils.float_or_string(v)
 
         return self.__barClass(
@@ -246,12 +259,15 @@ class GenericBarFeed(BarFeed):
         self.__columnNames[col] = name
 
     def setDateTimeFormat(self, dateTimeFormat):
+        """
+        Set the format string to use with strptime to parse datetime column.
+        """
         self.__dateTimeFormat = dateTimeFormat
 
     def setBarClass(self, barClass):
         self.__barClass = barClass
 
-    def addBarsFromCSV(self, instrument, path, timezone=None):
+    def addBarsFromCSV(self, instrument, path, timezone=None, skipMalformedBars=False):
         """Loads bars for a given instrument from a CSV formatted file.
         The instrument gets registered in the bar feed.
 
@@ -261,6 +277,8 @@ class GenericBarFeed(BarFeed):
         :type path: string.
         :param timezone: The timezone to use to localize bars. Check :mod:`pyalgotrade.marketsession`.
         :type timezone: A pytz timezone.
+        :param skipMalformedBars: True to skip errors while parsing bars.
+        :type skipMalformedBars: boolean.
         """
 
         if timezone is None:
@@ -271,7 +289,7 @@ class GenericBarFeed(BarFeed):
             timezone, self.__barClass
         )
 
-        super(GenericBarFeed, self).addBarsFromCSV(instrument, path, rowParser)
+        super(GenericBarFeed, self).addBarsFromCSV(instrument, path, rowParser, skipMalformedBars=skipMalformedBars)
 
         if rowParser.barsHaveAdjClose():
             self.__haveAdjClose = True

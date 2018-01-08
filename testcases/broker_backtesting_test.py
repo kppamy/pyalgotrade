@@ -1,6 +1,6 @@
 # PyAlgoTrade
 #
-# Copyright 2011-2015 Gabriel Martin Becedillas Ruiz
+# Copyright 2011-2017 Gabriel Martin Becedillas Ruiz
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -454,6 +454,13 @@ class BrokerTestCase(BaseTestCase):
         self.assertEqual(len(brk.getActiveOrders("ins1")), 1)
         self.assertEqual(len(brk.getActiveOrders("ins2")), 1)
         self.assertEqual(len(brk.getActiveOrders("ins3")), 0)
+
+    def testSetShares(self):
+        barFeed = self.buildBarFeed(BaseTestCase.TestInstrument, bar.Frequency.MINUTE)
+        brk = self.buildBroker(1000, barFeed)
+        brk.setShares("btc", 100, 50)
+        self.assertEqual(brk.getShares("btc"), 100)
+        self.assertEqual(brk.getEquity(), 1000 + 100*50)
 
 
 class MarketOrderTestCase(BaseTestCase):
