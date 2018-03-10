@@ -10,7 +10,7 @@ import pandas as pd
 
 
 def main(plot):
-    instrument = "njyh"
+    instrument = "lpyl"
     entrySMA =56 
     exitSMA = 8
     rsiPeriod = 2
@@ -27,11 +27,11 @@ def main(plot):
     # Download the bars.
     #feed = yahoofinance.build_feed([instrument], 2009, 2012, ".")
     feed = yahoofeed.Feed()
-    feed.addBarsFromCSV("njyh", "boll.csv")
+    feed.addBarsFromCSV("lpyl", "lpyl.csv")
     strat = rsi2.RSI2(feed, instrument, entrySMA, exitSMA, rsiPeriod, overBoughtThreshold, overSoldThreshold)
     sharpeRatioAnalyzer = sharpe.SharpeRatio()
     strat.attachAnalyzer(sharpeRatioAnalyzer)
-    plot=False
+    plot=True
 
     if plot:
         plt = plotter.StrategyPlotter(strat, True, True,False)
@@ -48,7 +48,7 @@ def main(plot):
     from datetime import datetime
 
     if plot:
-        plt.plot(fromDateTime=datetime.strptime('2014-09-01','%Y-%m-%d'),toDateTime=datetime.strptime('2015-09-27','%Y-%m-%d'))
+        plt.plot(fromDateTime=datetime.strptime('2017-07-01','%Y-%m-%d'),toDateTime=datetime.strptime('2018-03-01','%Y-%m-%d'))
 
 
 if __name__ == "__main__":
