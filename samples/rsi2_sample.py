@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import rsi2
 from pyalgotrade import plotter
-from pyalgotrade.tools import yahoofinance
+# from pyalgotrade.tools import yahoofinance
 from pyalgotrade.barfeed import yahoofeed
 from pyalgotrade.stratanalyzer import sharpe
 from pyalgotrade.stratanalyzer import returns
@@ -11,11 +11,11 @@ import pandas as pd
 
 def main(plot):
     instrument = "lpyl"
-    entrySMA =56 
-    exitSMA = 8
+    entrySMA = 200
+    exitSMA = 5
     rsiPeriod = 2
-    overBoughtThreshold =75 
-    overSoldThreshold = 17
+    overBoughtThreshold = 80
+    overSoldThreshold = 20
 
     # Load the bars. These files were manually downloaded from Yahoo Finance.
 #    feed = yahoofeed.Feed()
@@ -34,7 +34,7 @@ def main(plot):
     plot=True
 
     if plot:
-        plt = plotter.StrategyPlotter(strat, True, True,False)
+        plt = plotter.StrategyPlotter(strat, True, True, False)
         plt.getInstrumentSubplot(instrument).addDataSeries("Entry SMA", strat.getEntrySMA())
         plt.getInstrumentSubplot(instrument).addDataSeries("Exit SMA", strat.getExitSMA())
         plt.getOrCreateSubplot("rsi").addDataSeries("RSI", strat.getRSI())
@@ -43,7 +43,7 @@ def main(plot):
         
 
     strat.run()
-    print "Sharpe ratio: %.2f" % sharpeRatioAnalyzer.getSharpeRatio(0.05)
+    print("Sharpe ratio: %.2f" ,'%' ,sharpeRatioAnalyzer.getSharpeRatio(0.05))
     strat.info("Final portfolio value: $%.2f" % strat.getResult())
     from datetime import datetime
 

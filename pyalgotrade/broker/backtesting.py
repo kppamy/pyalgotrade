@@ -28,6 +28,8 @@ from pyalgotrade import logger
 import pyalgotrade.bar
 
 
+DEBUG = False
+
 ######################################################################
 # Commission models
 
@@ -344,10 +346,14 @@ class Broker(broker.Broker):
             cost = price * quantity * -1
             assert(cost < 0)
             sharesDelta = quantity
+            if DEBUG:
+                print('BUY %d' %(quantity),' shares on '+dateTime.strftime('%Y%m%d'))
         elif order.isSell():
             cost = price * quantity
             assert(cost > 0)
             sharesDelta = quantity * -1
+            if DEBUG:
+                print('SELL %d' %(quantity),' shares on '+dateTime.strftime('%Y%m%d'))
         else:  # Unknown action
             assert(False)
 

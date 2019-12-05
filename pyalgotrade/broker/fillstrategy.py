@@ -26,6 +26,8 @@ from pyalgotrade import broker
 import pyalgotrade.bar
 from . import slippage
 
+DEBUG = False
+
 
 # Returns the trigger price for a Limit or StopLimit order, or None if the limit price was not yet penetrated.
 def get_limit_price_trigger(action, limitPrice, useAdjustedValues, bar):
@@ -247,6 +249,8 @@ class DefaultStrategy(FillStrategy):
             elif self.__volumeLimit is not None:
                 # We can't round here because there is no order to request the instrument traits.
                 volumeLeft[instrument] = bar.getVolume() * self.__volumeLimit
+                if DEBUG:
+                    print(str(volumeLeft[instrument]), ' volumes left on ', bar.getDateTime().strftime('%Y%m%d'))
             # Reset the volume used for each instrument.
             self.__volumeUsed[instrument] = 0.0
 

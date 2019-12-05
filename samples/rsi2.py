@@ -3,8 +3,9 @@ from pyalgotrade.technical import ma
 from pyalgotrade.technical import rsi
 from pyalgotrade.technical import cross
 from pyalgotrade.broker import backtesting
+from pyalgotrade import broker
 
-
+DEBUG = False
 class RSI2(strategy.BacktestingStrategy):
     def __init__(self, feed, instrument, entrySMA, exitSMA, rsiPeriod, overBoughtThreshold, overSoldThreshold):
         commission=backtesting.TradePercentage(0.0025)
@@ -41,9 +42,28 @@ class RSI2(strategy.BacktestingStrategy):
         else:
             assert(False)
 
+    def print_transactions(self, action, execInfo):
+        if action == broker.Order.Action.BUY:
+            self.info("BUY at $%.2f" % (execInfo.getPrice()) +
+                      " shares: " + str((execInfo.getQuantity())) + ' on ' + execInfo.getDateTime().strftime("%Y%m%d"))
+        elif action == broker.Order.Action.BUY_TO_COVER:
+            self.info("BUY_TO_COVER at $%.2f" % (execInfo.getPrice()) +
+                      " shares: " + str((execInfo.getQuantity())) + ' on ' + execInfo.getDateTime().strftime(
+                          "%Y%m%d"))
+        elif action == broker.Order.Action.SELL:
+            self.info("SELL at $%.2f" % (execInfo.getPrice()) +
+                      " shares:" + str((execInfo.getQuantity())) + ' on ' + execInfo.getDateTime().strftime("%Y%m%d"))
+        elif action == broker.Order.Action.SELL_SHORT:
+            self.info("SELL_SHORT at $%.2f" % (execInfo.getPrice()) +
+                      " shares:" + str((execInfo.getQuantity())) + ' on ' + execInfo.getDateTime().strftime(
+                          "%Y%m%d"))
+
     def onEnterOk(self, position):
-        execInfo = position.getEntryOrder().getExecutionInfo()
-        #self.info("BUY at $%.2f" % (execInfo.getPrice()))
+        order = position.getEntryOrder()
+        execInfo = order.getExecutionInfo()
+        action = order.getAction()
+        if DEBUG:
+            self.print_transactions(action, execInfo)
 
     def onExitOk(self, position):
         if self.__longPos == position:
@@ -52,8 +72,11 @@ class RSI2(strategy.BacktestingStrategy):
             self.__shortPos = None
         else:
             assert(False)
-        execInfo = position.getExitOrder().getExecutionInfo()
-        #self.info("SELL at $%.2f" % (execInfo.getPrice()))
+        order = position.getEntryOrder()
+        execInfo = order.getExecutionInfo()
+        action = order.getAction()
+        if DEBUG:
+            self.print_transactions(action, execInfo)
 
     def onExitCanceled(self, position):
         # If the exit was canceled, re-submit it.
@@ -63,21 +86,32 @@ class RSI2(strategy.BacktestingStrategy):
         # Wait for enough bars to be available to calculate SMA and RSI.
         if self.__exitSMA[-1] is None or self.__entrySMA[-1] is None or self.__rsi[-1] is None:
             return
-
         bar = bars[self.__instrument]
         if self.__longPos is not None:
             if self.exitLongSignal(bar):
                 self.__longPos.exitMarket()
+                if DEBUG:
+                    print("exit long position: ",  self.__longPos.getShares(), " on ",
+                          bar.getDateTime().strftime('%Y%m%d') , ' at  price: ', str(bar.getPrice()))
         elif self.__shortPos is not None:
             if self.exitShortSignal():
                 self.__shortPos.exitMarket()
+                if DEBUG:
+                    print("exit short position ",  self.__shortPos.getShares(), " on ",
+                          bar.getDateTime().strftime('%Y%m%d'), ' at  price: ', str(bar.getPrice()))
         else:
             if self.enterLongSignal(bar):
                 shares = int(self.getBroker().getCash() * 0.9 / bars[self.__instrument].getPrice())
                 self.__longPos = self.enterLong(self.__instrument, shares, True)
+                if DEBUG:
+                    print("enter long shares: ", shares, " on ", bar.getDateTime().strftime('%Y%m%d'),
+                          ' at  price: ', str(bar.getPrice()), ' volume: ', str(bar.getVolume()))
             elif self.enterShortSignal(bar):
                 shares = int(self.getBroker().getCash() * 0.9 / bars[self.__instrument].getPrice())
                 self.__shortPos = self.enterShort(self.__instrument, shares, True)
+                if DEBUG:
+                    print("enter short shares: ", shares, " on ", bar.getDateTime().strftime('%Y%m%d'),
+                          ' at  price: ', str(bar.getPrice()),' volume: ', str(bar.getVolume()))
 
     def enterLongSignal(self, bar):
         return bar.getPrice() > self.__entrySMA[-1] and self.__rsi[-1] <= self.__overSoldThreshold
