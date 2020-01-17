@@ -19,8 +19,9 @@ class LinearRegression:
 
         :param feed:
         :param instrument:
-        :param x: DataFrame, attributes, variable
-        :param y: DataFrame
+        :param x: DataFrame, attributes, variable  (m * (self.__attributesnum +1 ))
+        :param theta: ( (self.__attributesnum +1 ) * 1 )
+        :param y: DataFrame (m * 1)
         :param learning_rate:
         :param iterations:
         '''
@@ -30,6 +31,7 @@ class LinearRegression:
         self.__attributesnum = x.columns.size
         assert (self.__samplesize == len(y))
         # m * (self.__attributesnum +1 )
+        self.__normalized = normalize
         if normalize:
             self.__x = self.normalize_features(x)
         self.__x = pd.concat([pd.Series(1, index=np.arange(0, self.__samplesize)), x], axis=1)
@@ -131,11 +133,15 @@ class LinearRegression:
         '''
         assert isinstance(input_x, list)
         assert self.__attributesnum == len(input_x)
-        for i in np.arange(self.__attributesnum):
-            input_x[i] = (input_x[i] - self.__xstatics.iloc[i, 0])/self.__xstatics.iloc[i, 1]
+        if self.__normalized:
+            for i in np.arange(self.__attributesnum):
+                input_x[i] = (input_x[i] - self.__xstatics.iloc[i, 0])/self.__xstatics.iloc[i, 1]
         normalized = pd.DataFrame(([1]+input_x))
         pre = self.__theta.transpose().dot(normalized)
-        return pre.loc[0, 0]
+        if isinstance(pre, pd.DataFrame):
+            return pre.loc[0, 0]
+        elif isinstance(pre, np.ndarray):
+            return pre[0][0]
 
     def normalize_features(self, x):
         '''
@@ -155,6 +161,20 @@ class LinearRegression:
             self.__xstatics.iloc[i, 1] = std
         return x
 
+    def closed_form_solution(self):
+        '''
+        Normal equations: theta = inverse((xt*x))*xt*y
+        http://openclassroom.stanford.edu/MainFolder/DocumentPage.php?course=MachineLearning&doc=exercises/ex3/ex3.html
+        in this case:
+        theta: ((self.__attributesnum + 1) * 1)
+        X: m * (self.__attributesnum + 1)
+        y: m * 1
+        :return: the final parameters theta
+        '''
+
+        xt = self.__x.transpose()
+        inverse = np.linalg.inv(xt.dot(self.__x))
+        self.__theta = inverse.dot(xt).dot(self.__y)
 
     def training(self):
         costs = pd.Series(0, index=np.arange(self.__iterations//50+1))
@@ -196,18 +216,23 @@ x = pd.read_csv('ex3Data/ex3x.dat',sep='\s+',header=None,engine='python')
 y = pd.read_csv('ex3Data/ex3y.dat', header=None)
 # y = pd.DataFrame(pp.StandardScaler().fit_transform(y))
 
+# #understanding learning rate
+# learning_rates = [0.01, 0.03, 0.1, 0.3, 1, 3]
+# analyze_cost = {}
+# for rate in learning_rates:
+#     lr = LinearRegression(x, y, learning_rate=rate, iterations=1000)
+#     costs = lr.training()
+#     analyze_cost.update({rate: costs})
+# out = pd.DataFrame(analyze_cost)
+# out.plot()
+# plt.show()
 
-learning_rates = [0.01, 0.03, 0.1, 0.3, 1, 3]
-analyze_cost = {}
-for rate in learning_rates:
-    lr = LinearRegression(x, y, learning_rate=rate, iterations=1000)
-    costs = lr.training()
-    analyze_cost.update({rate: costs})
-out = pd.DataFrame(analyze_cost)
-out.plot()
-plt.show()
-# predict = lr.predict([1650, 3])
-# print('estimated value = ', predict)
+lr = LinearRegression(x, y, learning_rate=0.01, iterations=1000, normalize=False)
+lr.closed_form_solution()
+
+
+predict = lr.predict([1650, 3])
+print('estimated value = ', predict)
 
 
 
